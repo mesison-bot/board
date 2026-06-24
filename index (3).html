@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dealflow — your job hunt, run like a pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;450;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#191B22; --ink-soft:#3A3E4A; --muted:#737A88; --faint:#9AA1AE;
+  --canvas:#F1F2F5; --surface:#FFFFFF; --raise:#FBFBFC;
+  --line:#E4E6EB; --line-soft:#EEEFF3;
+  --brand:#5B4DF0; --brand-ink:#3A2EC0; --brand-wash:#ECEAFE;
+  --green:#10A150; --green-wash:#E4F6EC;
+  --amber:#E0890B; --amber-wash:#FCF1DE;
+  --rose:#D6436A; --rose-wash:#FBE7ED;
+  --display:'Space Grotesk',system-ui,sans-serif;
+  --body:'Inter',system-ui,sans-serif;
+  --mono:'Space Mono',ui-monospace,monospace;
+  --r:14px; --r-sm:9px;
+  --shadow:0 1px 2px rgba(25,27,34,.05), 0 6px 22px rgba(25,27,34,.06);
+  --shadow-lg:0 18px 60px rgba(25,27,34,.20);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--body); color:var(--ink); background:var(--canvas);
+  -webkit-font-smoothing:antialiased; font-size:14px; line-height:1.45;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+a{color:var(--brand-ink)}
+::selection{background:var(--brand-wash)}
+:focus-visible{outline:2.5px solid var(--brand);outline-offset:2px;border-radius:6px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;background:rgba(241,242,245,.86);
+  backdrop-filter:saturate(1.4) blur(10px);
+  border-bottom:1px solid var(--line);
+  padding:14px clamp(16px,4vw,40px);
+  display:flex;align-items:center;gap:22px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:baseline;gap:11px;margin-right:auto}
+.wordmark{
+  font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:-.03em;
+  color:var(--ink);display:flex;align-items:center;gap:9px;
+}
+.wordmark .dot{width:11px;height:11px;border-radius:50%;background:var(--brand);
+  box-shadow:0 0 0 4px var(--brand-wash);display:inline-block}
+.tagline{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.02em;
+  text-transform:uppercase;display:none}
+@media(min-width:760px){.tagline{display:block}}
+
+.stats{display:flex;gap:8px}
+.stat{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:6px 13px;min-width:62px;text-align:left;line-height:1.1;
+}
+.stat .n{font-family:var(--display);font-weight:600;font-size:18px;letter-spacing:-.02em}
+.stat .l{font-family:var(--mono);font-size:9px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;margin-top:2px}
+.stat.win .n{color:var(--green)}
+.stat.alert .n{color:var(--amber)}
+
+.views{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.views button{
+  font-size:12.5px;font-weight:500;padding:7px 15px;border-radius:999px;color:var(--muted);
+  transition:color .15s,background .15s;
+}
+.views button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+.add{
+  background:var(--brand);color:#fff;font-weight:600;font-size:13.5px;
+  padding:10px 17px;border-radius:var(--r-sm);display:inline-flex;align-items:center;gap:7px;
+  box-shadow:0 2px 10px rgba(91,77,240,.35);transition:transform .12s,box-shadow .12s;
+}
+.add:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(91,77,240,.42)}
+.add:active{transform:translateY(0)}
+.add .plus{font-size:17px;line-height:0;margin-top:-1px}
+
+.searchwrap{flex:1 1 180px;min-width:140px;position:relative}
+.search{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:9px 12px 9px 32px;font-size:13px;
+}
+.searchwrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint)}
+
+main{padding:clamp(16px,3vw,30px) clamp(12px,4vw,40px) 90px}
+
+/* ---------- board ---------- */
+.board{display:flex;gap:14px;overflow-x:auto;padding-bottom:14px;scroll-snap-type:x proximity}
+.col{flex:0 0 264px;scroll-snap-align:start;display:flex;flex-direction:column;min-height:120px}
+.col-head{display:flex;align-items:center;gap:8px;padding:2px 4px 11px}
+.col-head .swatch{width:8px;height:8px;border-radius:2px}
+.col-head h3{font-family:var(--display);font-weight:600;font-size:13.5px;letter-spacing:-.01em;margin:0}
+.col-head .ct{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto}
+.col-body{display:flex;flex-direction:column;gap:9px;flex:1;border-radius:12px;padding:3px;transition:background .15s,box-shadow .15s}
+.col-body.drop{background:var(--brand-wash);box-shadow:inset 0 0 0 1.5px var(--brand)}
+.col-empty{font-size:12px;color:var(--faint);text-align:center;padding:22px 10px;border:1px dashed var(--line);border-radius:10px;font-style:italic}
+.add-tile{width:100%;border:1px dashed #C9CDD6;border-radius:11px;padding:11px;background:transparent;color:var(--muted);
+  font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .14s;margin-top:2px}
+.add-tile:hover{border-color:var(--brand);color:var(--brand-ink);background:var(--brand-wash)}
+.add-tile .plus{font-size:15px;line-height:0}
+
+.card{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:13px 13px 11px;box-shadow:var(--shadow);cursor:pointer;
+  transition:transform .12s,box-shadow .12s,border-color .12s;position:relative;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(25,27,34,.10);border-color:#D7DAE2}
+.card.dragging{opacity:.4}
+.card .co{font-family:var(--display);font-weight:600;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.card .star{margin-left:auto;color:var(--amber);font-size:13px;line-height:1}
+.card .role{font-size:12.5px;color:var(--ink-soft);margin-top:1px}
+.card .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;align-items:center}
+.chip{font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;
+  padding:3px 7px;border-radius:6px;font-weight:700;white-space:nowrap}
+.chip.A{background:var(--brand-wash);color:var(--brand-ink)}
+.chip.B{background:var(--green-wash);color:#0a7a3a}
+.chip.C{background:#EEF0F4;color:#525a68}
+.card .loc{font-size:11.5px;color:var(--muted)}
+.card .foot{display:flex;align-items:center;gap:8px;margin-top:11px;padding-top:9px;border-top:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:10px;color:var(--faint)}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:999px;font-weight:700}
+.pill.due{background:var(--amber-wash);color:var(--amber)}
+.pill.stale{background:var(--rose-wash);color:var(--rose)}
+.pill.fresh{background:var(--green-wash);color:#0a7a3a}
+
+/* ---------- dashboard ---------- */
+.dash{display:grid;gap:18px;max-width:1080px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
+.tile .n{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:-.03em;line-height:1}
+.tile .l{font-size:12px;color:var(--muted);margin-top:6px}
+.tile.accent{background:var(--ink);color:#fff}
+.tile.accent .l{color:#B9BDC8}
+.tile.win .n{color:var(--green)} .tile.alert .n{color:var(--amber)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.panel h2{font-family:var(--display);font-weight:600;font-size:15px;margin:0;padding:16px 18px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:9px}
+.panel h2 .badge{font-family:var(--mono);font-size:11px;background:var(--amber-wash);color:var(--amber);padding:2px 8px;border-radius:999px;font-weight:700}
+.attn{display:flex;flex-direction:column}
+.attn-row{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line-soft);cursor:pointer;transition:background .12s}
+.attn-row:last-child{border-bottom:none}
+.attn-row:hover{background:var(--raise)}
+.attn-row .co{font-family:var(--display);font-weight:600;font-size:14px;flex:1}
+.attn-row .why{font-size:12px;margin-left:auto;text-align:right}
+.bars{padding:8px 18px 18px}
+.bar-row{display:flex;align-items:center;gap:12px;margin-top:12px}
+.bar-row .k{width:130px;font-size:12.5px;color:var(--ink-soft)}
+.bar-track{flex:1;height:9px;background:var(--line-soft);border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px}
+.bar-row .v{font-family:var(--mono);font-size:12px;color:var(--muted);width:26px;text-align:right}
+
+/* ---------- list ---------- */
+.tablewrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);font-weight:700;position:sticky;top:0;background:var(--surface)}
+td{padding:12px 14px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{cursor:pointer;transition:background .12s}
+tbody tr:hover{background:var(--raise)}
+td .co{font-family:var(--display);font-weight:600;font-size:14px}
+.statustag{font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;letter-spacing:.02em}
+
+/* ---------- drawer ---------- */
+.overlay{position:fixed;inset:0;background:rgba(25,27,34,.34);backdrop-filter:blur(2px);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+.overlay.show{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:min(540px,100%);background:var(--canvas);
+  z-index:50;box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+}
+.drawer.show{transform:none}
+.d-head{padding:20px 22px 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.d-top{display:flex;align-items:flex-start;gap:12px}
+.d-co{font-family:var(--display);font-weight:700;font-size:23px;letter-spacing:-.02em;line-height:1.1;flex:1;border:none;background:none;width:100%;padding:0}
+.d-co:focus-visible{outline:none;box-shadow:0 1px 0 var(--brand)}
+.iconbtn{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:var(--muted);border:1px solid transparent;transition:background .12s,color .12s}
+.iconbtn:hover{background:var(--line-soft);color:var(--ink)}
+.iconbtn.danger:hover{background:var(--rose-wash);color:var(--rose)}
+.d-role{border:none;background:none;font-size:14px;color:var(--ink-soft);width:100%;padding:2px 0;margin-top:2px}
+.d-role:focus-visible{outline:none;box-shadow:0 1px 0 var(--brand)}
+.stagebar{display:flex;gap:6px;margin:16px 0 0;overflow-x:auto;padding-bottom:14px}
+.stagebar button{font-family:var(--mono);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;
+  padding:6px 10px;border-radius:7px;background:var(--line-soft);color:var(--muted);white-space:nowrap;transition:all .12s}
+.stagebar button[aria-pressed="true"]{color:#fff}
+.tabs{display:flex;gap:2px;padding:0 22px;background:var(--surface);border-bottom:1px solid var(--line)}
+.tabs button{font-size:13px;font-weight:500;padding:13px 4px;margin-right:18px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .12s,border-color .12s}
+.tabs button[aria-pressed="true"]{color:var(--ink);border-color:var(--brand);font-weight:600}
+.d-body{flex:1;overflow-y:auto;padding:22px}
+
+.field{margin-bottom:15px}
+.field>label{display:block;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px;font-weight:700}
+.field input,.field select,.field textarea{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;
+}
+.field textarea{resize:vertical;min-height:74px;line-height:1.5}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.priocheck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);cursor:pointer;user-select:none}
+.priocheck input{width:auto}
+
+.subhead{font-family:var(--display);font-weight:600;font-size:13px;color:var(--ink);margin:4px 0 11px;display:flex;align-items:center;gap:8px}
+.subhead .count{font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400}
+
+.entry{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 13px;margin-bottom:9px;position:relative}
+.entry .x{position:absolute;top:8px;right:8px;color:var(--faint);font-size:14px;width:22px;height:22px;border-radius:6px}
+.entry .x:hover{background:var(--rose-wash);color:var(--rose)}
+.entry .e-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:24px}
+.entry .e-name{font-weight:600;font-size:13.5px}
+.entry .e-tag{font-family:var(--mono);font-size:9.5px;font-weight:700;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--brand-wash);color:var(--brand-ink)}
+.entry .e-date{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.entry .e-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.entry .e-note{font-size:13px;color:var(--ink-soft);margin-top:7px;line-height:1.5;white-space:pre-wrap}
+.entry .e-next{font-size:12px;margin-top:8px;padding-top:7px;border-top:1px dashed var(--line);color:var(--amber);font-weight:500}
+.entry .e-link{font-size:12px;color:var(--brand-ink);text-decoration:none;word-break:break-all}
+.entry .e-link:hover{text-decoration:underline}
+
+.addbox{border:1px dashed var(--line);border-radius:var(--r-sm);padding:13px;background:var(--raise);margin-top:4px}
+.addbox .row2{margin-bottom:10px}
+.addbox input,.addbox select,.addbox textarea{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-bottom:10px}
+.addbox textarea{resize:vertical;min-height:54px}
+.btn-sm{background:var(--ink);color:#fff;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:8px}
+.btn-ghost{background:none;color:var(--brand-ink);font-weight:600;font-size:12.5px;padding:8px 4px}
+.toggle-add{font-size:12.5px;font-weight:600;color:var(--brand-ink);padding:8px 0;display:inline-flex;align-items:center;gap:6px}
+
+.seg-empty{font-size:12.5px;color:var(--faint);font-style:italic;padding:14px 2px}
+
+/* toast */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+  padding:11px 18px;border-radius:10px;font-size:13px;font-weight:500;z-index:80;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:9px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .tdot{width:7px;height:7px;border-radius:50%;background:var(--green)}
+
+.note-banner{background:var(--amber-wash);color:#8a5a08;font-size:12.5px;padding:9px 16px;text-align:center;border-bottom:1px solid #f0d9a8}
+
+@media(max-width:620px){
+  .stats{order:3;width:100%}
+  .views{order:2}
+  .d-body{padding:18px}
+  .row2{grid-template-columns:1fr}
+}
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div id="banner"></div>
+<header class="topbar">
+  <div class="brand">
+    <div class="wordmark"><span class="dot"></span>Dealflow</div>
+    <span class="tagline">your job hunt, run like a pipeline</span>
+  </div>
+  <div class="searchwrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input class="search" id="search" placeholder="Search companies, roles, notes…" autocomplete="off">
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="views" id="views">
+    <button data-view="board" aria-pressed="true">Board</button>
+    <button data-view="dashboard" aria-pressed="false">Dashboard</button>
+    <button data-view="list" aria-pressed="false">List</button>
+  </div>
+  <button class="add" id="addRole"><span class="plus">+</span> Add role</button>
+</header>
+
+<main id="view"></main>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="Role details"></aside>
+<div class="toast" id="toast"><span class="tdot"></span><span id="toastMsg"></span></div>
+
+<script>
+const STAGES = [
+  {id:'backlog',      label:'Backlog',         color:'#9AA1AE'},
+  {id:'researching',  label:'Researching',     color:'#5B4DF0'},
+  {id:'outreach',     label:'Outreach',        color:'#7C5CFC'},
+  {id:'conversation', label:'In conversation', color:'#E0890B'},
+  {id:'interviewing', label:'Interviewing',    color:'#0FA3A3'},
+  {id:'offer',        label:'Offer',           color:'#10A150'},
+  {id:'closed',       label:'Closed',          color:'#C0566F'},
+];
+const ACTIVE = new Set(['researching','outreach','conversation','interviewing']);
+const stageLabel = id => (STAGES.find(s=>s.id===id)||STAGES[0]).label;
+const stageColor = id => (STAGES.find(s=>s.id===id)||STAGES[0]).color;
+const CONV_TYPES = ['Phone screen','Interview','Call','Recruiter','Coffee chat','Email','Other'];
+const TOUCH_CHANNELS = ['LinkedIn','Email','Referral','Application','InMail','Call','Event'];
+
+const KEY = 'dealflow:v1';
+const MIG_KEY = 'dealflow:heat:v2';
+// Tiers reorganized by AI heat (hottest -> least), researched June 2026
+const TIER_NAME = {A:'Frontier & hypergrowth', B:'High-growth breakouts', C:'Strong & emerging'};
+const HEAT_TIER = {
+  'OpenAI':'A','Anthropic':'A','Anysphere (Cursor)':'A','Perplexity':'A','Cognition':'A','Sierra':'A','Decagon':'A',
+  'Glean':'B','Harvey':'B','Lovable':'B','Clay':'B','Ramp':'B','AlphaSense':'B',
+  'Hebbia':'C','Rogo':'C','Brex':'C','Mercury':'C','Fintool / FinChat':'C'
+};
+const NEW_HOT = ['OpenAI','Anthropic','Cognition','Lovable'];
+const uid = () => Math.random().toString(36).slice(2,9);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const fmtDate = iso => { if(!iso) return ''; const d=new Date(iso+'T00:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+const daysSince = iso => { if(!iso) return null; const d=new Date(iso+'T00:00:00'); return Math.floor((Date.now()-d.getTime())/86400000); };
+const esc = s => (s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let state = {roles:[], view:'board', query:'', openId:null, tab:'overview', memoryOnly:false};
+
+/* ---------- persistence: works inside Claude (window.storage) and on any normal
+   website like GitHub Pages (localStorage), falling back to memory if blocked ---------- */
+const STORE = (function(){
+  const hasClaude = !!(window.storage && window.storage.get && window.storage.set);
+  let ls = null;
+  if(!hasClaude){
+    try{ const t='__df__'; window.localStorage.setItem(t,'1'); window.localStorage.removeItem(t); ls = window.localStorage; }
+    catch(_){ ls = null; }
+  }
+  const mem = {};
+  const mode = hasClaude ? 'claude' : (ls ? 'local' : 'memory');
+  return {
+    mode,
+    async get(k){
+      if(mode==='claude'){ try{ const r = await window.storage.get(k); return (r && r.value!=null) ? r.value : null; }catch(_){ return null; } }
+      if(mode==='local'){ try{ const v = ls.getItem(k); return v==null ? null : v; }catch(_){ return null; } }
+      return (k in mem) ? mem[k] : null;
+    },
+    async set(k,v){
+      if(mode==='claude'){ try{ await window.storage.set(k,v); return true; }catch(_){ return false; } }
+      if(mode==='local'){ try{ ls.setItem(k,v); return true; }catch(_){ return false; } }
+      mem[k]=v; return true;
+    }
+  };
+})();
+
+async function load(){
+  const raw = await STORE.get(KEY);
+  if(raw){
+    try{ state.roles = JSON.parse(raw); }catch(_){ state.roles = seed(); }
+    const mig = await STORE.get(MIG_KEY);
+    if(!mig){ applyHeatMigration(); await save(); await STORE.set(MIG_KEY,'1'); }
+  } else {
+    state.roles = seed();
+    await save();
+    await STORE.set(MIG_KEY,'1');
+  }
+  if(STORE.mode==='memory'){
+    state.memoryOnly = true;
+    banner('This browser is blocking storage (often private/incognito mode), so changes won\u2019t be saved between visits.');
+  }
+}
+async function save(){ await STORE.set(KEY, JSON.stringify(state.roles)); }
+function banner(msg){ document.getElementById('banner').innerHTML = '<div class="note-banner">'+esc(msg)+'</div>'; }
+
+/* ---------- one-time migration: apply heat tiers + add new hot companies ---------- */
+function applyHeatMigration(){
+  state.roles.forEach(r=>{ if(HEAT_TIER[r.company]) r.tier = HEAT_TIER[r.company]; });
+  const have = new Set(state.roles.map(r=>r.company));
+  seed().filter(s=>NEW_HOT.includes(s.company) && !have.has(s.company)).forEach(s=>state.roles.unshift(s));
+}
+
+/* ---------- seed data: AI companies ranked by heat (hottest -> least), June 2026 ---------- */
+function seed(){
+  const mk = (o)=>Object.assign({id:uid(),tier:'C',location:'',comp:'',role:'SDR',link:'',angle:'',priority:false,
+    status:'backlog',nextAction:'',nextDate:'',dateAdded:todayISO(),contacts:[],touches:[],conversations:[]},o);
+  return [
+    // ---- Tier A · Frontier & hypergrowth ----
+    mk({company:'OpenAI',tier:'A',location:'SF',comp:'Verify',role:'SDR / GTM',priority:true,
+        angle:'Frontier lab (~$500B). GTM is competitive but real \u2014 your finance fluency plays on enterprise/finance accounts. A reach: go in through a warm intro.',
+        contacts:[{id:uid(),name:'',title:'GTM Recruiter / SDR Manager',linkedin:'',email:'',warm:'Defy / SF network'}]}),
+    mk({company:'Anthropic',tier:'A',location:'SF',comp:'Verify',role:'SDR / GTM',priority:true,
+        angle:'Frontier lab, enterprise GTM scaling fast (reportedly the highest-valued lab in 2026). Same reach-but-real logic as OpenAI.',
+        contacts:[{id:uid(),name:'',title:'GTM Recruiter / SDR Manager',linkedin:'',email:'',warm:'Defy / SF network'}]}),
+    mk({company:'Anysphere (Cursor)',tier:'A',location:'SF',comp:'Verify',role:'SDR / GTM',priority:true,
+        angle:'Fastest B2B software company ever to $2B ARR (~$50B val, IPO chatter). White-hot \u2014 early GTM = outsized learning + equity.',
+        contacts:[{id:uid(),name:'',title:'Head of GTM',linkedin:'',email:'',warm:'Defy / SF network'}]}),
+    mk({company:'Perplexity',tier:'A',location:'SF',comp:'Verify',role:'SDR',
+        angle:'AI search at ~$22.6B, reportedly IPO-bound; enterprise GTM scaling. Strong launchpad brand.',
+        contacts:[{id:uid(),name:'',title:'Sales Development Manager',linkedin:'',email:'',warm:'SF network / apply'}]}),
+    mk({company:'Cognition',tier:'A',location:'SF',comp:'Verify',role:'SDR',
+        angle:'Maker of Devin, the autonomous software engineer \u2014 one of the hottest agent companies. Technical buyer: lead with curiosity + research chops.',
+        contacts:[{id:uid(),name:'',title:'Head of Sales',linkedin:'',email:'',warm:'Defy / SF network'}]}),
+    mk({company:'Sierra',tier:'A',location:'SF',comp:'Verify',role:'SDR',
+        angle:'Top conversational-AI agent company and a named IPO candidate. Prestige logo for a first sales role.',
+        contacts:[{id:uid(),name:'',title:'Head of Sales',linkedin:'',email:'',warm:'Defy / co-investor network'}]}),
+    mk({company:'Decagon',tier:'A',location:'SF',comp:'Verify',role:'SDR',
+        angle:'Leading AI customer-support agents; ~300 customers incl. major AI labs. IPO candidate.',
+        contacts:[{id:uid(),name:'',title:'SDR Manager',linkedin:'',email:'',warm:'Defy portfolio? ask partner'}]}),
+    // ---- Tier B · High-growth breakouts ----
+    mk({company:'Glean',tier:'B',location:'Palo Alto (next door)',comp:'OTE ~$65\u201390K',role:'SDR',status:'researching',priority:true,
+        angle:'$7.2B Series F, Forbes AI 50. Actively hiring SDRs with a real training program. Note: \u201c6mo prospecting\u201d min + ~90-day process \u2014 start early, lead with the warm intro.',
+        contacts:[{id:uid(),name:'',title:'Director of Sales Development',linkedin:'',email:'',warm:'Apply + DM Director of SDR'}]}),
+    mk({company:'Harvey',tier:'B',location:'SF',comp:'Verify',role:'SDR',
+        angle:'Breakout legal / professional-services AI (fastest-growing shortlist). You understand the professional buyer better than most grads.',
+        contacts:[{id:uid(),name:'',title:'Sales Development Manager',linkedin:'',email:'',warm:'Cal Poly / alumni'}]}),
+    mk({company:'Lovable',tier:'B',location:'Stockholm / Remote',comp:'Verify',role:'SDR / GTM',
+        angle:'Europe\u2019s fastest AI startup: text-to-app, ~$400M ARR, ~$12B val talks. Remote-friendly, explosive brand.',
+        contacts:[{id:uid(),name:'',title:'GTM Lead',linkedin:'',email:'',warm:'Direct / apply'}]}),
+    mk({company:'Clay',tier:'B',location:'NY / Remote',comp:'Verify',role:'SDR',
+        angle:'Hot GTM data platform that sells TO sales teams \u2014 you\u2019d learn the prospecting craft from the source.',
+        contacts:[{id:uid(),name:'',title:'Sales Lead',linkedin:'',email:'',warm:'Direct / community'}]}),
+    mk({company:'Ramp',tier:'B',location:'SF / NY (hybrid)',comp:'Strong (verify)',role:'SDR (some founding)',status:'researching',priority:true,
+        angle:'One of the fastest-growing software companies, now AI-for-finance. SDRs work directly with CFOs & finance leaders; some founding-SDR roles.',
+        contacts:[{id:uid(),name:'',title:'Sales Development Lead',linkedin:'',email:'',warm:'Apply + DM SDR lead'}]}),
+    mk({company:'AlphaSense',tier:'B',location:'NY / SF / Remote',comp:'Verify',role:'SDR',
+        angle:'Established market-intelligence leader for financial services (you\u2019ve used FactSet). Most geographically flexible of the finance-AI set.',
+        contacts:[{id:uid(),name:'',title:'Sales Development Manager',linkedin:'',email:'',warm:'Cal Poly / IB Society alumni'}]}),
+    // ---- Tier C · Strong & emerging ----
+    mk({company:'Hebbia',tier:'C',location:'New York',comp:'Verify',role:'SDR / GTM',
+        angle:'Agentic research for deal teams & asset managers. Your diligence + modeling background = instant credibility.',
+        contacts:[{id:uid(),name:'',title:'SDR Manager',linkedin:'',email:'',warm:'Defy / co-investor network'}]}),
+    mk({company:'Rogo',tier:'C',location:'New York (relo/remote?)',comp:'Verify',role:'SDR / GTM',
+        angle:'AI built for investment banking (CIMs, comps, deal screening). Ex-Lazard/JPM founders \u2014 you speak the exact buyer language.',
+        contacts:[{id:uid(),name:'',title:'Head of Sales',linkedin:'',email:'',warm:'Ask Defy partner for intro'}]}),
+    mk({company:'Brex',tier:'C',location:'SF (hybrid M/W/Th)',comp:'OTE ~$82.5\u201392.9K',role:'Outbound SDR',status:'researching',priority:true,
+        angle:'Entry-level friendly; selling a finance product to finance buyers; SDRs build pipeline for $1M deals.',
+        contacts:[{id:uid(),name:'',title:'SDR Manager',linkedin:'',email:'',warm:'Apply + DM the SDR Manager'}]}),
+    mk({company:'Mercury',tier:'C',location:'SF',comp:'Verify',role:'SDR',
+        angle:'Banking for startups; finance-buyer fit and a brand finance people respect.',
+        contacts:[{id:uid(),name:'',title:'Head of Sales',linkedin:'',email:'',warm:'Cal Poly / SF network'}]}),
+    mk({company:'Fintool / FinChat',tier:'C',location:'SF / Remote (small)',comp:'Verify',role:'Founding SDR',
+        angle:'Early-stage, finance-specific. A founding-SDR swing where your resume stands out most.',
+        contacts:[{id:uid(),name:'',title:'Founder / CEO',linkedin:'',email:'',warm:'Direct to founder'}]}),
+  ];
+}
+
+/* ---------- derived ---------- */
+function lastTouch(r){
+  const ds=[...(r.touches||[]).map(t=>t.date),...(r.conversations||[]).map(c=>c.date)].filter(Boolean).sort();
+  return ds.length?ds[ds.length-1]:null;
+}
+function attentionReason(r){
+  if(r.status==='closed'||r.status==='offer') return null;
+  if(r.nextDate && r.nextDate < todayISO()) return {txt:'Next action overdue', cls:'due'};
+  if(ACTIVE.has(r.status)){
+    const lt=lastTouch(r), d=daysSince(lt);
+    if(lt===null) return {txt:'No outreach yet', cls:'stale'};
+    if(d>=7) return {txt:d+'d since last touch', cls:'stale'};
+  }
+  return null;
+}
+function filtered(){
+  const q=state.query.trim().toLowerCase();
+  if(!q) return state.roles;
+  return state.roles.filter(r=>[r.company,r.role,r.location,r.angle,r.comp,
+    ...(r.contacts||[]).map(c=>c.name+' '+c.title),
+    ...(r.conversations||[]).map(c=>c.withWhom+' '+c.notes)].join(' ').toLowerCase().includes(q));
+}
+
+/* ---------- render: shell ---------- */
+function renderStats(){
+  const rs=state.roles;
+  const active=rs.filter(r=>ACTIVE.has(r.status)).length;
+  const convos=rs.filter(r=>['conversation','interviewing'].includes(r.status)).length;
+  const offers=rs.filter(r=>r.status==='offer').length;
+  const attn=rs.filter(r=>attentionReason(r)).length;
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="n">${active}</div><div class="l">Active</div></div>
+    <div class="stat"><div class="n">${convos}</div><div class="l">Talking</div></div>
+    <div class="stat alert"><div class="n">${attn}</div><div class="l">Attention</div></div>
+    <div class="stat win"><div class="n">${offers}</div><div class="l">Offers</div></div>`;
+}
+function render(){
+  renderStats();
+  document.querySelectorAll('#views button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.view===state.view));
+  const v=document.getElementById('view');
+  if(state.view==='board') v.innerHTML=boardHTML();
+  else if(state.view==='dashboard') v.innerHTML=dashHTML();
+  else v.innerHTML=listHTML();
+}
+
+/* ---------- render: board ---------- */
+function touchPill(r){
+  const reason=attentionReason(r);
+  if(reason) return `<span class="pill ${reason.cls}">${esc(reason.txt)}</span>`;
+  const lt=lastTouch(r);
+  if(lt){ const d=daysSince(lt); return `<span class="pill fresh">${d===0?'today':d+'d ago'}</span>`; }
+  return '';
+}
+function cardHTML(r){
+  return `<div class="card" draggable="true" data-id="${r.id}">
+    <div class="co">${esc(r.company)}${r.priority?'<span class="star">\u2605</span>':''}</div>
+    <div class="role">${esc(r.role||'')}</div>
+    <div class="meta">
+      <span class="chip ${r.tier}">Tier ${r.tier}</span>
+      ${r.location?`<span class="loc">${esc(r.location)}</span>`:''}
+    </div>
+    <div class="foot">
+      ${r.comp?`<span>${esc(r.comp)}</span>`:'<span>&nbsp;</span>'}
+      <span style="margin-left:auto">${touchPill(r)}</span>
+    </div>
+  </div>`;
+}
+function boardHTML(){
+  const rs=filtered();
+  return `<div class="board">`+STAGES.map(s=>{
+    const items=rs.filter(r=>r.status===s.id);
+    const addTile = s.id==='backlog' ? `<button class="add-tile" data-add-role><span class="plus">+</span> New role</button>` : '';
+    return `<section class="col">
+      <div class="col-head"><span class="swatch" style="background:${s.color}"></span>
+        <h3>${s.label}</h3><span class="ct">${items.length}</span></div>
+      <div class="col-body" data-stage="${s.id}">
+        ${items.length?items.map(cardHTML).join(''):`<div class="col-empty">${emptyMsg(s.id)}</div>`}
+        ${addTile}
+      </div></section>`;
+  }).join('')+`</div>`;
+}
+function emptyMsg(id){
+  return {backlog:'Add roles, then drag them right as you progress.',researching:'Nothing here yet.',
+    outreach:'Drag a role here once you\u2019ve started reaching out.',conversation:'Replies and screens land here.',
+    interviewing:'On-sites and interview loops.',offer:'The goal. \uD83C\uDFAF',closed:'Passed or rejected \u2014 keep the record.'}[id]||'Empty';
+}
+
+/* ---------- render: dashboard ---------- */
+function dashHTML(){
+  const rs=state.roles;
+  const active=rs.filter(r=>ACTIVE.has(r.status)).length;
+  const attnList=rs.filter(r=>attentionReason(r));
+  const offers=rs.filter(r=>r.status==='offer').length;
+  const interv=rs.filter(r=>r.status==='interviewing').length;
+  const tierCounts={A:0,B:0,C:0}; rs.forEach(r=>tierCounts[r.tier]=(tierCounts[r.tier]||0)+1);
+  const maxTier=Math.max(1,...Object.values(tierCounts));
+  const tierColor={A:'#5B4DF0',B:'#10A150',C:'#737A88'};
+  const tierName=TIER_NAME;
+
+  const attnRows = attnList.length ? attnList.map(r=>{
+    const why=attentionReason(r);
+    return `<div class="attn-row" data-open="${r.id}">
+      <span class="co">${esc(r.company)}</span>
+      <span class="statustag" style="background:${stageColor(r.status)}1a;color:${stageColor(r.status)}">${stageLabel(r.status)}</span>
+      <span class="why pill ${why.cls}">${esc(why.txt)}</span></div>`;
+  }).join('') : `<div class="seg-empty" style="padding:18px">Nothing needs chasing right now. Keep the sequence moving.</div>`;
+
+  return `<div class="dash">
+    <div class="tiles">
+      <div class="tile accent"><div class="n">${rs.length}</div><div class="l">Companies in flight</div></div>
+      <div class="tile"><div class="n">${active}</div><div class="l">Active deals</div></div>
+      <div class="tile"><div class="n">${interv}</div><div class="l">Interviewing</div></div>
+      <div class="tile alert"><div class="n">${attnList.length}</div><div class="l">Need attention</div></div>
+      <div class="tile win"><div class="n">${offers}</div><div class="l">Offers</div></div>
+    </div>
+    <div class="panel">
+      <h2>Needs your attention ${attnList.length?`<span class="badge">${attnList.length}</span>`:''}</h2>
+      <div class="attn">${attnRows}</div>
+    </div>
+    <div class="panel">
+      <h2>Coverage by tier</h2>
+      <div class="bars">
+        ${['A','B','C'].map(t=>`<div class="bar-row">
+          <span class="k">Tier ${t} \u00b7 ${tierName[t]}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${(tierCounts[t]/maxTier*100)||0}%;background:${tierColor[t]}"></span></span>
+          <span class="v">${tierCounts[t]||0}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- render: list ---------- */
+function listHTML(){
+  const rs=filtered();
+  if(!rs.length) return `<div class="tablewrap"><div class="seg-empty" style="padding:40px;text-align:center">No matches. Try a different search.</div></div>`;
+  return `<div class="tablewrap"><table><thead><tr>
+    <th>Company</th><th>Role</th><th>Tier</th><th>Stage</th><th>Location</th><th>Comp</th><th>Last touch</th></tr></thead><tbody>
+    ${rs.map(r=>{const lt=lastTouch(r);return `<tr data-open="${r.id}">
+      <td><span class="co">${esc(r.company)}</span>${r.priority?' <span style="color:var(--amber)">\u2605</span>':''}</td>
+      <td>${esc(r.role||'')}</td>
+      <td><span class="chip ${r.tier}">${r.tier}</span></td>
+      <td><span class="statustag" style="background:${stageColor(r.status)}1a;color:${stageColor(r.status)}">${stageLabel(r.status)}</span></td>
+      <td style="color:var(--muted)">${esc(r.location||'')}</td>
+      <td style="color:var(--muted)">${esc(r.comp||'')}</td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--muted)">${lt?fmtDate(lt):'\u2014'}</td>
+    </tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+
+/* ---------- drawer ---------- */
+function openRole(id){ state.openId=id; state.tab='overview'; renderDrawer(); document.getElementById('overlay').classList.add('show'); document.getElementById('drawer').classList.add('show'); }
+function closeDrawer(){ document.getElementById('overlay').classList.remove('show'); document.getElementById('drawer').classList.remove('show'); state.openId=null; }
+function getRole(){ return state.roles.find(r=>r.id===state.openId); }
+
+function renderDrawer(){
+  const r=getRole(); if(!r) return;
+  const d=document.getElementById('drawer');
+  d.innerHTML=`
+    <div class="d-head">
+      <div class="d-top">
+        <div style="flex:1">
+          <input class="d-co" data-edit="company" value="${esc(r.company)}" placeholder="Company">
+          <input class="d-role" data-edit="role" value="${esc(r.role||'')}" placeholder="Role title">
+        </div>
+        <button class="iconbtn" data-prio title="Priority">${r.priority?'<span style="color:var(--amber);font-size:17px">\u2605</span>':'<span style="font-size:17px;color:var(--faint)">\u2606</span>'}</button>
+        <button class="iconbtn danger" data-del title="Delete role">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V6"/></svg></button>
+        <button class="iconbtn" data-close title="Close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="stagebar">
+        ${STAGES.map(s=>`<button data-stage-set="${s.id}" aria-pressed="${r.status===s.id}" style="${r.status===s.id?`background:${s.color}`:''}">${s.label}</button>`).join('')}
+      </div>
+    </div>
+    <div class="tabs">
+      <button data-tab="overview" aria-pressed="${state.tab==='overview'}">Overview</button>
+      <button data-tab="outreach" aria-pressed="${state.tab==='outreach'}">Outreach</button>
+      <button data-tab="conversations" aria-pressed="${state.tab==='conversations'}">Conversations</button>
+    </div>
+    <div class="d-body">${state.tab==='overview'?overviewTab(r):state.tab==='outreach'?outreachTab(r):convTab(r)}</div>`;
+}
+
+function overviewTab(r){
+  return `
+  <div class="row2">
+    <div class="field"><label>Tier</label><select data-edit="tier">
+      ${['A','B','C'].map(t=>`<option value="${t}" ${r.tier===t?'selected':''}>Tier ${t} \u00b7 ${TIER_NAME[t]}</option>`).join('')}</select></div>
+    <div class="field"><label>Location</label><input data-edit="location" value="${esc(r.location||'')}" placeholder="e.g. SF (hybrid)"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label>Comp / OTE</label><input data-edit="comp" value="${esc(r.comp||'')}" placeholder="e.g. OTE ~$85K"></div>
+    <div class="field"><label>Date added</label><input type="date" data-edit="dateAdded" value="${esc(r.dateAdded||'')}"></div>
+  </div>
+  <div class="field"><label>Job posting link</label><input data-edit="link" value="${esc(r.link||'')}" placeholder="https://…"></div>
+  <div class="field"><label>Your angle \u2014 why you fit</label><textarea data-edit="angle" placeholder="The story you lead with for this role">${esc(r.angle||'')}</textarea></div>
+  <div class="row2">
+    <div class="field"><label>Next action</label><input data-edit="nextAction" value="${esc(r.nextAction||'')}" placeholder="e.g. DM the SDR manager"></div>
+    <div class="field"><label>Next action date</label><input type="date" data-edit="nextDate" value="${esc(r.nextDate||'')}"></div>
+  </div>`;
+}
+
+function outreachTab(r){
+  const contacts=(r.contacts||[]).map(c=>`
+    <div class="entry">
+      <button class="x" data-del-contact="${c.id}">\u2715</button>
+      <div class="e-top"><span class="e-name">${esc(c.name||'(add a name)')}</span>
+        ${c.title?`<span class="e-tag">${esc(c.title)}</span>`:''}</div>
+      ${c.warm?`<div class="e-sub">\uD83E\uDD1D ${esc(c.warm)}</div>`:''}
+      <div style="margin-top:7px;display:flex;gap:14px;flex-wrap:wrap">
+        ${c.linkedin?`<a class="e-link" href="${esc(c.linkedin)}" target="_blank" rel="noopener">LinkedIn \u2197</a>`:''}
+        ${c.email?`<a class="e-link" href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}
+      </div>
+    </div>`).join('') || `<div class="seg-empty">No contacts yet. Add the person who feels the pain \u2014 SDR Manager, then Head of Sales.</div>`;
+
+  const touches=(r.touches||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(t=>`
+    <div class="entry">
+      <button class="x" data-del-touch="${t.id}">\u2715</button>
+      <div class="e-top"><span class="e-tag" style="background:var(--green-wash);color:#0a7a3a">${esc(t.channel||'Touch')}</span>
+        <span class="e-date">${fmtDate(t.date)}</span></div>
+      ${t.notes?`<div class="e-note">${esc(t.notes)}</div>`:''}
+    </div>`).join('') || `<div class="seg-empty">No touches logged. Run the sequence: LinkedIn \u2192 email \u2192 follow-up \u2192 break-up.</div>`;
+
+  return `
+    <div class="subhead">Contacts <span class="count">${(r.contacts||[]).length}</span></div>
+    ${contacts}
+    <button class="toggle-add" data-toggle="addContact">+ Add contact</button>
+    <div class="addbox" id="addContact" style="display:none">
+      <div class="row2"><input id="c-name" placeholder="Name"><input id="c-title" placeholder="Title"></div>
+      <input id="c-linkedin" placeholder="LinkedIn URL">
+      <input id="c-email" placeholder="Email">
+      <input id="c-warm" placeholder="Warm-intro path (e.g. via Defy partner)">
+      <button class="btn-sm" data-save-contact>Add contact</button>
+    </div>
+
+    <div class="subhead" style="margin-top:22px">Outreach touches <span class="count">${(r.touches||[]).length}</span></div>
+    ${touches}
+    <button class="toggle-add" data-toggle="addTouch">+ Log a touch</button>
+    <div class="addbox" id="addTouch" style="display:none">
+      <div class="row2">
+        <select id="t-channel">${TOUCH_CHANNELS.map(c=>`<option>${c}</option>`).join('')}</select>
+        <input type="date" id="t-date" value="${todayISO()}">
+      </div>
+      <textarea id="t-notes" placeholder="What you sent / what happened"></textarea>
+      <button class="btn-sm" data-save-touch>Log touch</button>
+    </div>`;
+}
+
+function convTab(r){
+  const items=(r.conversations||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(c=>`
+    <div class="entry">
+      <button class="x" data-del-conv="${c.id}">\u2715</button>
+      <div class="e-top"><span class="e-tag" style="background:var(--amber-wash);color:var(--amber)">${esc(c.type||'Conversation')}</span>
+        ${c.withWhom?`<span class="e-name" style="font-size:13px">${esc(c.withWhom)}</span>`:''}
+        <span class="e-date">${fmtDate(c.date)}</span></div>
+      ${c.notes?`<div class="e-note">${esc(c.notes)}</div>`:''}
+      ${c.nextStep?`<div class="e-next">\u2192 ${esc(c.nextStep)}${c.nextDate?' \u00b7 '+fmtDate(c.nextDate):''}</div>`:''}
+    </div>`).join('') || `<div class="seg-empty">No conversations yet. Every screen, call, and interview goes here \u2014 with the next step.</div>`;
+
+  return `
+    <div class="subhead">Conversation log <span class="count">${(r.conversations||[]).length}</span></div>
+    ${items}
+    <button class="toggle-add" data-toggle="addConv">+ Log a conversation</button>
+    <div class="addbox" id="addConv" style="display:none">
+      <div class="row2">
+        <select id="v-type">${CONV_TYPES.map(c=>`<option>${c}</option>`).join('')}</select>
+        <input type="date" id="v-date" value="${todayISO()}">
+      </div>
+      <input id="v-who" placeholder="With whom (name / title)">
+      <textarea id="v-notes" placeholder="What was said, your read, signals…"></textarea>
+      <div class="row2"><input id="v-next" placeholder="Next step"><input type="date" id="v-nextdate"></div>
+      <button class="btn-sm" data-save-conv>Log conversation</button>
+    </div>`;
+}
+
+/* ---------- mutations ---------- */
+function commit(msg){ save(); render(); if(state.openId) renderDrawer(); if(msg) toast(msg); }
+function toast(msg){ const t=document.getElementById('toast'); document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('show'),1900); }
+
+function addRole(){
+  const r={id:uid(),company:'New role',role:'SDR',tier:'C',location:'',comp:'',link:'',angle:'',priority:false,
+    status:'backlog',nextAction:'',nextDate:'',dateAdded:todayISO(),contacts:[],touches:[],conversations:[]};
+  state.roles.unshift(r); save(); render(); openRole(r.id); toast('Role added');
+  setTimeout(()=>{const i=document.querySelector('.d-co');if(i){i.focus();i.select();}},120);
+}
+
+/* ---------- events ---------- */
+document.getElementById('views').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.view=b.dataset.view;render();});
+document.getElementById('addRole').addEventListener('click',addRole);
+document.getElementById('search').addEventListener('input',e=>{state.query=e.target.value;if(state.view!=='dashboard')render();});
+document.getElementById('overlay').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.openId)closeDrawer();});
+
+/* open from board/list/dashboard */
+document.getElementById('view').addEventListener('click',e=>{
+  if(e.target.closest('[data-add-role]')){ addRole(); return; }
+  const open=e.target.closest('[data-open]'); if(open){openRole(open.dataset.open);return;}
+  const card=e.target.closest('.card'); if(card&&!card.classList.contains('dragging')){openRole(card.dataset.id);}
+});
+
+/* drag & drop on board */
+let dragId=null;
+document.getElementById('view').addEventListener('dragstart',e=>{const c=e.target.closest('.card');if(!c)return;dragId=c.dataset.id;c.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',dragId);}catch(_){}});
+document.getElementById('view').addEventListener('dragend',e=>{const c=e.target.closest('.card');if(c)c.classList.remove('dragging');document.querySelectorAll('.col-body.drop').forEach(b=>b.classList.remove('drop'));dragId=null;});
+document.getElementById('view').addEventListener('dragover',e=>{const body=e.target.closest('.col-body');if(!body)return;e.preventDefault();document.querySelectorAll('.col-body.drop').forEach(b=>{if(b!==body)b.classList.remove('drop')});body.classList.add('drop');});
+document.getElementById('view').addEventListener('drop',e=>{const body=e.target.closest('.col-body');if(!body||!dragId)return;e.preventDefault();const r=state.roles.find(x=>x.id===dragId);if(r&&r.status!==body.dataset.stage){r.status=body.dataset.stage;commit('Moved to '+stageLabel(body.dataset.stage));}body.classList.remove('drop');});
+
+/* drawer interactions */
+document.getElementById('drawer').addEventListener('click',e=>{
+  const r=getRole();
+  if(e.target.closest('[data-close]')) return closeDrawer();
+  if(e.target.closest('[data-del]')){ if(confirm('Delete '+r.company+'? This removes all its contacts, touches, and conversations.')){state.roles=state.roles.filter(x=>x.id!==r.id);closeDrawer();save();render();toast('Role deleted');} return; }
+  if(e.target.closest('[data-prio]')){ r.priority=!r.priority; commit(); return; }
+  const ss=e.target.closest('[data-stage-set]'); if(ss){ r.status=ss.dataset.stageSet; commit('Moved to '+stageLabel(r.status)); return; }
+  const tb=e.target.closest('[data-tab]'); if(tb){ state.tab=tb.dataset.tab; renderDrawer(); return; }
+  const tg=e.target.closest('[data-toggle]'); if(tg){ const box=document.getElementById(tg.dataset.toggle); if(box) box.style.display=box.style.display==='none'?'block':'none'; return; }
+
+  if(e.target.closest('[data-save-contact]')){
+    const c={id:uid(),name:val('c-name'),title:val('c-title'),linkedin:val('c-linkedin'),email:val('c-email'),warm:val('c-warm')};
+    if(!c.name&&!c.title){toast('Add a name or title first');return;}
+    r.contacts=r.contacts||[]; r.contacts.push(c); commit('Contact added'); return;
+  }
+  if(e.target.closest('[data-save-touch]')){
+    const t={id:uid(),channel:val('t-channel'),date:val('t-date')||todayISO(),notes:val('t-notes')};
+    r.touches=r.touches||[]; r.touches.push(t); commit('Touch logged'); return;
+  }
+  if(e.target.closest('[data-save-conv]')){
+    const c={id:uid(),type:val('v-type'),date:val('v-date')||todayISO(),withWhom:val('v-who'),notes:val('v-notes'),nextStep:val('v-next'),nextDate:val('v-nextdate')};
+    r.conversations=r.conversations||[]; r.conversations.push(c);
+    if(c.nextStep&&c.nextDate){r.nextAction=c.nextStep;r.nextDate=c.nextDate;}
+    commit('Conversation logged'); return;
+  }
+  const dc=e.target.closest('[data-del-contact]'); if(dc){ r.contacts=r.contacts.filter(x=>x.id!==dc.dataset.delContact); commit(); return; }
+  const dt=e.target.closest('[data-del-touch]'); if(dt){ r.touches=r.touches.filter(x=>x.id!==dt.dataset.delTouch); commit(); return; }
+  const dv=e.target.closest('[data-del-conv]'); if(dv){ r.conversations=r.conversations.filter(x=>x.id!==dv.dataset.delConv); commit(); return; }
+});
+/* inline field edits */
+document.getElementById('drawer').addEventListener('change',e=>{
+  const f=e.target.closest('[data-edit]'); if(!f)return; const r=getRole(); if(!r)return;
+  r[f.dataset.edit]=f.value; save();
+  if(['company','tier','priority','role','comp','location'].includes(f.dataset.edit)){ render(); renderStats(); }
+});
+function val(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+
+/* ---------- boot ---------- */
+(async function(){ await load(); render(); })();
+</script>
+</body>
+</html>
